@@ -32,7 +32,7 @@ async fn main() -> ts_cli_util::Result<()> {
 
     let args = Args::parse();
 
-    let (config, mut control, stream) = args.common.connect().await?;
+    let (config, mut control, stream) = args.common.connect_control().await?;
 
     let (region_id, derp_servers) = ts_cli_util::set_closest_derp(&mut control, stream).await?;
 

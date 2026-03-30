@@ -12,6 +12,7 @@ use axum::{
     routing::{get, post},
 };
 use clap::Parser;
+use tracing::level_filters::LevelFilter;
 
 static WWW: include_dir::Dir = include_dir::include_dir!("$CARGO_MANIFEST_DIR/examples/axum/www");
 
@@ -44,25 +45,45 @@ async fn count(count: State<Arc<AtomicUsize>>) -> impl IntoResponse {
 #[derive(clap::Parser)]
 #[command(version, about)]
 struct Args {
-    #[clap(flatten)]
-    common: ts_cli_util::CommonArgs,
+    /// Path to a key file to use. Will be created if it doesn't exist.
+    #[arg(short = 'c', long, default_value = "tsrs_keys.json")]
+    key_file: std::path::PathBuf,
+
+    /// The auth key to connect with.
+    ///
+    /// Can be omitted if the key file is already authenticated.
+    #[arg(short = 'k', long)]
+    auth_key: Option<String>,
+
+    /// Port to bind to.
+    #[arg(short, long, default_value_t = 80)]
+    port: u16,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn core::error::Error>> {
-    ts_cli_util::init_tracing();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
+        .init();
 
     let args = Args::parse();
-    let config = args.common.load_or_init_config().await?;
 
     let dev = tailscale::Device::new(
-        config.control_config(),
-        args.common.auth_key,
-        config.key_state,
+        &tailscale::Config {
+            key_state: tailscale::load_key_file(&args.key_file, Default::default()).await?,
+            ..Default::default()
+        },
+        args.auth_key.clone(),
     )
     .await?;
 
-    let listener = dev.tcp_listen((dev.ipv4().await?, 80).into()).await?;
+    let listener = dev
+        .tcp_listen((dev.ipv4().await?, args.port).into())
+        .await?;
 
     let router = Router::new()
         .route("/count", post(count))

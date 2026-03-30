@@ -34,7 +34,7 @@ For instructions on how to run tests, lints, etc., see [CONTRIBUTING.md](CONTRIB
 To run the `axum` example, which runs an HTTP server on the tailnet hosting a simple test page:
 
 ```sh
-$ cargo run --example axum -- -k $AUTH_KEY -s state.json
+$ cargo run --example axum -- -k $AUTH_KEY -c key_file.json
 ...
 INFO axum: http server listening url=http://$TAILNET_IP:80/index.html
 ```

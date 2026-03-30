@@ -3594,14 +3594,17 @@ dependencies = [
  "include_dir",
  "mime_guess",
  "rand 0.10.1",
+ "serde",
+ "serde_json",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
- "ts_cli_util",
+ "tracing-subscriber",
  "ts_control",
  "ts_keys",
  "ts_netstack_smoltcp",
  "ts_runtime",
+ "url",
 ]
 
 [[package]]
@@ -4132,18 +4135,14 @@ dependencies = [
  "clap",
  "futures-util",
  "gethostname",
- "serde",
- "serde_json",
- "tokio",
+ "tailscale",
  "tracing",
  "tracing-subscriber",
  "tracing-tracy",
  "tracy-client",
  "ts_control",
- "ts_keys",
  "ts_netcheck",
  "ts_transport_derp",
- "url",
 ]
 
 [[package]]

@@ -15,9 +15,11 @@
 //! # async fn main() -> Result<(), Box<dyn Error>> {
 //! // Open a new connection to tailscale
 //! let dev = tailscale::Device::new(
-//!     Default::default(), // control config
+//!     &tailscale::Config {
+//!         key_state: tailscale::load_key_file("tsrs_key.json", Default::default()).await?,
+//!         ..Default::default()
+//!     },
 //!     Some("YOUR_AUTH_KEY_HERE".to_owned()),
-//!     Default::default(), // key state: WARNING, this creates a throwaway node identity
 //! ).await?;
 //!
 //! // Bind a UDP socket on our tailnet IP, port 1234
@@ -58,8 +60,10 @@ use netstack::{CreateSocket, netcore::Channel};
 
 #[cfg(feature = "axum")]
 pub mod axum;
+mod config;
 mod error;
 
+pub use config::{BadFormatBehavior, Config, load_key_file};
 #[doc(inline)]
 pub use error::Error;
 
@@ -70,15 +74,28 @@ pub struct Device {
 }
 
 impl Device {
-    /// Spawn a new device with the given config, auth key, and keys.
-    pub async fn new(
-        config: ts_control::Config,
-        auth_key: Option<String>,
-        keys: ts_keys::NodeState,
-    ) -> Result<Self, Error> {
+    /// Spawn a device from the given [`Config`] and auth key.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let dev = tailscale::Device::new(
+    ///     &tailscale::Config {
+    ///         key_state: tailscale::load_key_file("tsrs_state.json", Default::default()).await?,
+    ///         ..Default::default()
+    ///     },
+    ///     Some("MY_AUTH_KEY".to_string()),
+    /// ).await?;
+    /// # Ok(()) }
+    /// ```
+    pub async fn new(config: &Config, auth_key: Option<String>) -> Result<Self, Error> {
         check_magic_env()?;
 
-        let rt = ts_runtime::Runtime::spawn(config, auth_key, keys).await?;
+        let rt =
+            ts_runtime::Runtime::spawn(config.control_config(), auth_key, config.key_state.clone())
+                .await?;
         let channel = rt.channel().await?;
 
         Ok(Self {

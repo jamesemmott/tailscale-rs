@@ -1,11 +1,7 @@
 #![doc = include_str!("../README.md")]
 
-mod config;
-
 use std::sync::Arc;
 
-#[doc(inline)]
-pub use config::Config;
 use futures_util::{Stream, StreamExt};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{Layer, layer::SubscriberExt, util::SubscriberInitExt};
@@ -23,32 +19,44 @@ static GLOBAL_ALLOC: tracy_client::ProfiledAllocator<std::alloc::System> =
 /// Shared args for a tailscale cli program.
 #[derive(Debug, Clone, PartialEq, Eq, clap::Parser)]
 pub struct CommonArgs {
-    /// The path of the config file to save to.
-    #[arg(short, long, default_value = "config.json")]
-    pub config_path: std::path::PathBuf,
+    /// The path of the key file to save to.
+    #[arg(short = 'c', long, default_value = "config.json")]
+    pub key_state_path: std::path::PathBuf,
 
     /// The auth key to connect with.
     ///
     /// Can be omitted if the keys in the config are already authenticated.
     #[arg(short = 'k', long)]
     pub auth_key: Option<String>,
+
+    /// Hostname to request for this node.
+    #[arg(
+        short = 'H',
+        long,
+        default_value = "gethostname::gethostname.into_string().ok()"
+    )]
+    pub hostname: Option<String>,
 }
 
 impl CommonArgs {
-    /// Load or init the config using the config path from the args.
-    pub async fn load_or_init_config(&self) -> std::io::Result<Config> {
-        Config::load_or_init(&self.config_path).await
+    /// Convert the args to a [`tailscale::Config`].
+    pub async fn config(&self) -> Result<tailscale::Config> {
+        Ok(tailscale::Config {
+            key_state: tailscale::load_key_file(&self.key_state_path, Default::default()).await?,
+            requested_hostname: self.hostname.clone(),
+            ..Default::default()
+        })
     }
 
     /// Load or init the config, then connect to the configured control server.
-    pub async fn connect(
+    pub async fn connect_control(
         &self,
     ) -> Result<(
-        Config,
+        tailscale::Config,
         ts_control::AsyncControlClient,
         impl Stream<Item = Arc<ts_control::StateUpdate>> + Send + Sync + use<>,
     )> {
-        let config = self.load_or_init_config().await?;
+        let config: tailscale::Config = self.config().await?;
 
         let (client, stream) = ts_control::AsyncControlClient::connect(
             &config.control_config(),

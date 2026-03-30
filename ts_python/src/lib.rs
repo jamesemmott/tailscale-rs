@@ -39,14 +39,15 @@ pub mod tailscale {
         TRACING_ONCE.call_once(ts_cli_util::init_tracing);
 
         future_into_py(py, async move {
-            let config = ts_cli_util::Config::load_or_init(config_path.as_ref()).await?;
+            let config = ts::Config {
+                key_state: ts::load_key_file(config_path, Default::default())
+                    .await
+                    .map_err(py_value_err)?,
+                client_name: Some("ts_python".to_owned()),
+                ..Default::default()
+            };
 
-            // TODO(npry): let clients also define an app name once the sdk-level name moves
-            //  to a dedicated field
-            let mut control_config = config.control_config();
-            control_config.client_name = Some("ts_python".to_owned());
-
-            let dev = ts::Device::new(control_config, auth_key, config.key_state)
+            let dev = ts::Device::new(&config, auth_key)
                 .await
                 .map_err(py_value_err)?;
 

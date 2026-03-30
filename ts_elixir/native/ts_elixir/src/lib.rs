@@ -53,9 +53,13 @@ where
 #[rustler::nif(schedule = "DirtyIo")]
 fn connect(env: rustler::Env, config_path: String, auth_key: Option<String>) -> impl Encoder {
     let dev = block_on(async move {
-        let config = ts_cli_util::Config::load_or_init(config_path.as_ref()).await?;
-        let dev =
-            tailscale::Device::new(config.control_config(), auth_key, config.key_state).await?;
+        let config = tailscale::Config {
+            key_state: tailscale::load_key_file(config_path, Default::default()).await?,
+            client_name: Some("ts_elixir".to_owned()),
+            ..Default::default()
+        };
+
+        let dev = tailscale::Device::new(&config, auth_key).await?;
 
         ok_arc(Device {
             inner: Arc::new(dev),
