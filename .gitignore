@@ -1,0 +1,17 @@
+/result
+/target
+# produced by cargo-bisect-rustc
+target-bisector-*/
+.idea/
+flamegraph.svg
+perf.data
+perf.data.old
+heaptrack.*
+config.json
+priv/
+_build/
+ts_elixir/deps/
+*.exe
+*.dll
+*.lib
+tailscale.h

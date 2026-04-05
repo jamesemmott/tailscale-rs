@@ -1,0 +1,15 @@
+[package]
+name = "ts_packet"
+version = "0.1.0"
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+bytes.workspace = true
+crypto_box.workspace = true
+ts_hexdump.workspace = true
+
+[lints]
+workspace = true

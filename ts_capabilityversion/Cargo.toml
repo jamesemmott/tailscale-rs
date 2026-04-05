@@ -1,0 +1,16 @@
+[package]
+name = "ts_capabilityversion"
+version = "0.1.0"
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { workspace = true, optional = true }
+
+[features]
+serde = ["dep:serde"]
+
+[lints]
+workspace = true

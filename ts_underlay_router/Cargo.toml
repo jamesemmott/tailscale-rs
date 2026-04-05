@@ -1,0 +1,16 @@
+[package]
+name = "ts_underlay_router"
+version = "0.1.0"
+
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+ts_keys.workspace = true
+ts_packet.workspace = true
+ts_transport.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,26 @@
+[package]
+name = "ts_bart_packetfilter"
+version = "0.1.0"
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Our crates.
+ts_array256 = { workspace = true, features = ["smallvec"] }
+ts_bart.workspace = true
+ts_bitset.workspace = true
+ts_dynbitset.workspace = true
+ts_packetfilter.workspace = true
+
+# Unconditionally required dependencies.
+hashbrown.workspace = true
+smallvec.workspace = true
+
+[dev-dependencies]
+ipnet.workspace = true
+proptest.workspace = true
+
+[lints]
+workspace = true

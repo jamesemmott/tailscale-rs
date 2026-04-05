@@ -1,0 +1,34 @@
+[package]
+name = "ts_runtime"
+version = "0.1.0"
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Our crates.
+ts_bart.workspace = true
+ts_bart_packetfilter.workspace = true
+ts_control.workspace = true
+ts_dataplane.workspace = true
+ts_keys.workspace = true
+ts_netcheck.workspace = true
+ts_netstack_smoltcp = { workspace = true, features = ["tokio"] }
+ts_overlay_router.workspace = true
+ts_packet.workspace = true
+ts_packetfilter = { workspace = true, features = ["checking-filter"] }
+ts_packetfilter_state.workspace = true
+ts_transport.workspace = true
+ts_transport_derp.workspace = true
+
+# Unconditionally required dependencies.
+futures.workspace = true
+kameo = "0.19"
+kameo_actors = "0.4"
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

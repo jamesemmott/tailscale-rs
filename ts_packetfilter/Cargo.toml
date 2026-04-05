@@ -1,0 +1,21 @@
+[package]
+name = "ts_packetfilter"
+version = "0.1.0"
+edition.workspace = true
+license-file.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Unconditionally required dependencies.
+hashbrown.workspace = true
+ipnet.workspace = true
+static_assertions.workspace = true
+tracing.workspace = true
+
+[features]
+checking-filter = []
+std = []
+
+[lints]
+workspace = true
