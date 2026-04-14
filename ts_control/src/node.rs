@@ -17,8 +17,13 @@ pub struct Node {
     pub id: Id,
     /// The node's stable id.
     pub stable_id: StableId,
-    /// The name of the node.
-    pub name: String,
+
+    /// This node's hostname.
+    pub hostname: String,
+
+    /// The tailnet this node belongs to.
+    pub tailnet: Option<String>,
+
     /// The tags assigned to this node.
     pub tags: Vec<String>,
 
@@ -44,6 +49,48 @@ pub struct Node {
     pub derp_region: Option<ts_transport_derp::RegionId>,
 }
 
+impl Node {
+    /// The fully-qualified domain name of the node.
+    ///
+    /// This is a string of the form `$HOST.$TAILNET_DOMAIN.`. For tailnets controlled by
+    /// Tailscale's control plane, this usually means `$HOST.tail1234.ts.net.`
+    ///
+    /// The `trailing_dot` parameter specifies whether to include the trailing dot in the
+    /// fqdn. This is the way the Go codebase formats this field.
+    pub fn fqdn(&self, trailing_dot: bool) -> String {
+        let dot = if trailing_dot { "." } else { "" };
+        match &self.tailnet {
+            Some(tailnet) => format!("{}.{tailnet}{dot}", self.hostname),
+            None => format!("{}{dot}", self.hostname),
+        }
+    }
+
+    /// Report whether this node matches the given `name`.
+    ///
+    /// `name` is checked for equality with both this node's bare hostname and its fqdn. A
+    /// trailing `.` may be present.
+    pub fn matches_name(&self, name: &str) -> bool {
+        // This approach is taken to avoid allocating a buffer just for the sake of making this
+        // comparison: try to chop `.tailnet.` off of the end of `name` and compare the
+        // remainder to our hostname. If `.tailnet.` doesn't match `name`, we'll end up comparing
+        // our hostname to `hostname.other_tailnet.`, which won't succeed. If `name` was just the
+        // hostname, nothing will have been chopped, so the comparison will still be hostname-to-
+        // hostname.
+
+        let name = name.strip_suffix('.').unwrap_or(name);
+
+        let name = if let Some(tailnet) = &self.tailnet {
+            name.strip_suffix(tailnet.as_str())
+                .and_then(|name| name.strip_suffix('.'))
+                .unwrap_or(name)
+        } else {
+            name
+        };
+
+        name == self.hostname
+    }
+}
+
 /// Addresses for a node within a tailnet.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TailnetAddress {
@@ -65,10 +112,20 @@ impl TailnetAddress {
 
 impl From<&ts_control_serde::Node<'_>> for Node {
     fn from(value: &ts_control_serde::Node) -> Self {
+        let fqdn_without_trailing_dot = value.name.strip_suffix('.').unwrap_or(value.name);
+
+        let (hostname, tailnet) = match fqdn_without_trailing_dot.split_once('.') {
+            Some((hostname, tailnet)) => (hostname, Some(tailnet.to_owned())),
+            None => (fqdn_without_trailing_dot, None),
+        };
+
         Self {
             id: value.id,
             stable_id: StableId(value.stable_id.0.to_string()),
-            name: value.name.to_string(),
+
+            hostname: hostname.to_owned(),
+            tailnet,
+
             tags: value
                 .tags
                 .as_ref()
