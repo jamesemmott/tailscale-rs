@@ -1,4 +1,8 @@
 defmodule Tailscale.Tcp.Listener do
+  @moduledoc """
+  Tailscale TCP listening socket functionality.
+  """
+
   @typedoc """
   A TCP listener waiting for incoming connections.
   """

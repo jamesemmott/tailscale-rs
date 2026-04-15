@@ -8,7 +8,8 @@ defmodule Tailscale.Udp do
   """
   @opaque t() :: Tailscale.Native.udp_socket()
 
-  @spec bind(Tailscale.t(), Tailscale.ip_addr() | :ip4 | :ip6, :inet.port_number()) :: {:ok, t()} | {:error, any()}
+  @spec bind(Tailscale.t(), Tailscale.ip_addr() | :ip4 | :ip6, :inet.port_number()) ::
+          {:ok, t()} | {:error, any()}
   @doc """
   Bind a UDP socket on the specified port.
 

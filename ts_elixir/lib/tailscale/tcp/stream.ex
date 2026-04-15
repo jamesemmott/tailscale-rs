@@ -1,4 +1,8 @@
 defmodule Tailscale.Tcp.Stream do
+  @moduledoc """
+  Tailscale TCP sockets (connected).
+  """
+
   @typedoc """
   A handle to a TCP stream (connected socket).
   """
