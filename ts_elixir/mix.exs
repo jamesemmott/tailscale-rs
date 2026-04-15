@@ -56,6 +56,9 @@ defmodule TsElixir.MixProject do
       api_reference: true,
       extras: ["README.md"],
       formatters: ["html"],
+      # The :tailscale* erlang-style modules generate paths like :tailscale.html, which is invalid.
+      # Exclude from ExDoc for now.
+      filter_modules: ~r/Elixir\..*/,
       groups_for_modules: [
         Tcp: [
           Tailscale.Tcp,
