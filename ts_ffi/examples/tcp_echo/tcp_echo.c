@@ -65,7 +65,13 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    const struct ts_device* dev = ts_init(
+    /*
+     * This example uses `ts_init_from_key_file`, which uses a `ts_config` set to defaults,  other
+     * than the key state loaded from the given file.
+     *
+     * See the UDP example for use of `ts_init` with a `ts_config` and explicit key file loading.
+     */
+    const struct ts_device* dev = ts_init_from_key_file(
         argv[1],
         argv[2]
     );

@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    const struct ts_device* dev = ts_init(
+    const struct ts_device* dev = ts_init_from_key_file(
         argv[1],
         argv[2]
     );
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     ts_in6_addr_t addrv6;
     char addr_str[INET6_ADDRSTRLEN];
 
-    assert(!ts_ipv4(dev, &addrv4));
+    assert(!ts_ipv4_addr(dev, &addrv4));
 
     if (ts_peer_ipv4_addr(dev, argv[3], &addrv4) <= 0) {
         return EXIT_FAILURE;
