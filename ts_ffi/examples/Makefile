@@ -44,8 +44,8 @@ all: $(TARGETS)
 clean:
 	rm -f $(TARGETS)
 
-$(TARGETS): %$(TARGET_SUFFIX): libtailscalers $(wildcard %/*.c)
-	$(CC) -o $@ $(wildcard $*/*.c) $(CFLAGS)
+$(TARGETS): %$(TARGET_SUFFIX): %.c libtailscalers
+	$(CC) -o $@ $< $(CFLAGS)
 	
 libtailscalers:
 	cargo build -p ts_ffi --profile $(RUST_PROFILE) $(RUST_TARGET_FLAG)
