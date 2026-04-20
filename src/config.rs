@@ -74,6 +74,7 @@ impl From<&Config> for ts_control::Config {
             client_name: value.client_name.clone(),
             hostname: value.requested_hostname.clone(),
             server_url: value.control_server_url.clone(),
+            tags: value.requested_tags.clone(),
         }
     }
 }

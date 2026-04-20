@@ -20,6 +20,9 @@ pub struct Config {
     ///
     /// This will be reported to the control server in the `HostInfo.App` field.
     pub client_name: Option<String>,
+
+    /// Tags to request from the control server.
+    pub tags: Vec<String>,
 }
 
 impl Config {
@@ -53,6 +56,7 @@ impl Default for Config {
             server_url: DEFAULT_CONTROL_SERVER.clone(),
             hostname: None,
             client_name: None,
+            tags: Default::default(),
         }
     }
 }
