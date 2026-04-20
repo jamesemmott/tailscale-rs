@@ -16,12 +16,18 @@ struct Args {
     /// The auth key to connect with.
     ///
     /// Can be omitted if the key file is already authenticated.
-    #[arg(short = 'k', long)]
+    #[arg(short = 'k', long, env = "TS_AUTH_KEY")]
     auth_key: Option<String>,
 
     /// The hostname this node will request.
     #[arg(short = 'H', long, default_value = "peer_ping_example")]
     hostname: Option<String>,
+
+    /// The URL of the control URL to connect to.
+    ///
+    /// Uses the Tailscale control server by default if unspecified.
+    #[arg(long, env = "TS_CONTROL_URL")]
+    control_url: Option<url::Url>,
 
     /// Peer to send messages to.
     #[clap(short, long)]
@@ -46,7 +52,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut config = Config::default_with_key_file(&args.key_file).await?;
     config.requested_hostname = args.hostname;
-    let dev = Device::new(&config, args.auth_key.clone()).await?;
+
+    if let Some(url) = args.control_url {
+        config.control_server_url = url;
+    }
+
+    let dev = Device::new(&config, args.auth_key).await?;
 
     let sock = dev.udp_bind((dev.ipv4_addr().await?, 1234).into()).await?;
     let mut ticker = tokio::time::interval(Duration::from_secs_f64(args.ping_interval_secs));

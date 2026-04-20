@@ -216,7 +216,7 @@ url.workspace = true
 
 [dev-dependencies]
 # Dependencies for examples
-clap = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive", "env"] }
 include_dir = "0.7"
 mime_guess = "2.0"
 tokio = { workspace = true, features = ["full"] }

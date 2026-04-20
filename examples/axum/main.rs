@@ -56,12 +56,18 @@ struct Args {
     /// The auth key to connect with.
     ///
     /// Can be omitted if the key file is already authenticated.
-    #[arg(short = 'k', long)]
+    #[arg(short = 'k', long, env = "TS_AUTH_KEY")]
     auth_key: Option<String>,
 
     /// The hostname this node will request.
     #[arg(short = 'H', long, default_value = "axum-example")]
     hostname: Option<String>,
+
+    /// The URL of the control URL to connect to.
+    ///
+    /// Uses the Tailscale control server by default if unspecified.
+    #[arg(long, env = "TS_CONTROL_URL")]
+    control_url: Option<url::Url>,
 
     /// Port to bind to.
     #[arg(short, long, default_value_t = 80)]
@@ -79,9 +85,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .init();
 
     let args = Args::parse();
+
     let mut config = Config::default_with_key_file(&args.key_file).await?;
     config.requested_hostname = args.hostname;
-    let dev = Device::new(&config, args.auth_key.clone()).await?;
+
+    if let Some(url) = args.control_url {
+        config.control_server_url = url;
+    }
+
+    let dev = Device::new(&config, args.auth_key).await?;
 
     let listener = dev
         .tcp_listen((dev.ipv4_addr().await?, args.port).into())
