@@ -7,6 +7,14 @@ on:
       - v*
   pull_request:
   workflow_dispatch:
+    inputs:
+      hex_repo:
+        description: "hex repo to publish to"
+        default: staging
+        required: true
+        options:
+          - staging
+          - prod
 
 permissions:
   contents: read
@@ -16,6 +24,21 @@ env:
   # cached state
   cache_key: init
 
+  package_artifact: ts_elixir-${{ github.sha }}
+
+  is_tag_push: ${{ startsWith(github.ref, 'refs/tags/') }}
+  is_dispatch: ${{ github.event_name == 'workflow_dispatch' }}
+
+  hex_environment: &hex_environment ${{ case(inputs.hex_repo == 'prod', 'hex.pm', startsWith(github.ref, 'refs/tags/'), 'hex.pm', 'staging.hex.pm') }}
+
+  latest_elixir: &latest_elixir 1.19.5
+  latest_otp: &latest_otp 28.4.2
+  latest_rust: &latest_rust 1.94.0
+
+defaults:
+  run:
+    working-directory: ts_elixir
+
 jobs:
   build_test:
     name: compile, test, static checks (elixir ${{ matrix.elixir.label }}, otp ${{ matrix.otp.label }}, rust ${{ matrix.rust_toolchain.label }})
@@ -24,18 +47,14 @@ jobs:
     strategy:
       matrix:
         elixir:
-          - version: 1.19.5
+          - version: *latest_elixir
             label: latest
         otp:
-          - version: 28.4.2
+          - version: *latest_otp
             label: latest
         rust_toolchain:
-          - version: 1.94.0
+          - version: *latest_rust
             label: latest
-
-    defaults:
-      run:
-        working-directory: ts_elixir
 
     steps:
       - name: Checkout
@@ -116,3 +135,122 @@ jobs:
           name: exdoc-${{ github.sha }}
           path: ts_elixir/doc
           retention-days: 7
+
+      - &detach_cargo_toml
+        name: Detach Cargo.toml from workspace
+        working-directory: ts_elixir/native/ts_elixir
+        run: |
+          pip install tomli-w
+          
+          python deworkspace_cargo_toml.py \
+            --root ../../../Cargo.toml \
+            --repo_sha ${{ github.sha }} \
+            < Cargo.toml > Cargo.toml.new
+          
+          mv Cargo.toml.new Cargo.toml
+          echo generated Cargo.toml:
+          cat Cargo.toml
+
+      - name: Build Hex package (no publish)
+        run: mix hex.build --unpack -o tailscale
+        env:
+          MIX_ENV: prod
+
+      - name: Upload package tarball
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.package_artifact }}
+          path: ts_elixir/tailscale
+
+  publish:
+    name: publish
+    runs-on: linux-x86_64-16cpu
+    needs: build_test
+    if: ${{ startsWith(github.ref, 'refs/tags/*') || github.event_name == 'workflow_dispatch' }}
+
+    environment: *hex_environment
+
+    # Artifact generation, signing, upload, respectively
+    permissions:
+      attestations: write
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cache mix
+        id: cache-mix
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.mix
+            ts_elixir/_build/
+            ts_elixir/deps/
+          key: ${{ runner.os }}-mix-${{ env.cache_key }}-elixir-${{ env.latest_elixir }}-otp-${{ env.latest_otp }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Cache Rust
+        id: cache-rust-elixir
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.rustup/toolchains
+            target/
+          key: ${{ runner.os }}-elixir-rs-${{ env.cache_key }}-${{ env.latest_rust }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install elixir
+        id: install-elixir
+        uses: erlef/setup-beam@v1.24.0
+        with:
+          otp-version: ${{ env.latest_otp }}
+          elixir-version: ${{ env.latest_elixir }}
+
+      - name: Install Rust toolchain
+        id: install-rust-toolchain
+        if: steps.cache-rust-elixir.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.latest_rust }}
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile dependencies
+        run: mix deps.compile
+
+      - name: Download built package
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.package_artifact }}
+          path: ts_elixir/tailscale
+
+      - name: Generate attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: ts_elixir/tailscale
+
+      - *detach_cargo_toml
+
+      - name: Publish deps to staging.hex.pm
+        if: ${{ env.hex_environment == 'staging.hex.pm' }}
+        run: python staging_publish_deps.py
+        env:
+          HEX_API_URL: ${{ vars.HEX_API_URL }}
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+
+      - name: Publish (dry run)
+        run: mix hex.publish --dry-run --yes
+        env:
+          HEX_API_URL: ${{ vars.HEX_API_URL }}
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+
+      - name: Publish
+        run: mix hex.publish --yes
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+          HEX_API_URL: ${{ vars.HEX_API_URL }}
