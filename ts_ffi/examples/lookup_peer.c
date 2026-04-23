@@ -33,12 +33,9 @@ int main(int argc, char** argv) {
     );
     assert(dev);
 
-    // Wait for device to receive its IP: first netmap has been received.
     ts_in_addr_t addrv4;
     ts_in6_addr_t addrv6;
     char addr_str[INET6_ADDRSTRLEN];
-
-    assert(!ts_ipv4_addr(dev, &addrv4));
 
     if (ts_peer_ipv4_addr(dev, argv[3], &addrv4) <= 0) {
         return EXIT_FAILURE;

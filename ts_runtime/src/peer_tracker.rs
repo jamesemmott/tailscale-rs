@@ -8,6 +8,7 @@ use std::{
 use kameo::{
     actor::ActorRef,
     message::{Context, Message},
+    reply::ReplySender,
 };
 use ts_control::{Node, NodeId};
 use ts_keys::NodePublicKey;
@@ -18,7 +19,15 @@ use crate::{Error, env::Env};
 pub struct PeerTracker {
     peers: HashMap<NodePublicKey, Node>,
     id_to_nodekey: HashMap<NodeId, NodePublicKey>,
+    seen_state_update: bool,
+    pending_requests: Vec<Pending>,
     env: Env,
+}
+
+impl PeerTracker {
+    fn peer_by_name_opt(&self, name: &str) -> Option<&Node> {
+        self.peers.values().find(|&peer| peer.matches_name(name))
+    }
 }
 
 impl kameo::Actor for PeerTracker {
@@ -31,9 +40,15 @@ impl kameo::Actor for PeerTracker {
         Ok(Self {
             peers: Default::default(),
             id_to_nodekey: Default::default(),
+            pending_requests: Default::default(),
+            seen_state_update: false,
             env,
         })
     }
+}
+
+enum Pending {
+    PeerByName(PeerByName, ReplySender<Option<Node>>),
 }
 
 // For messages with arguments, a struct is generated with the args as fields. They aren't
@@ -41,17 +56,36 @@ impl kameo::Actor for PeerTracker {
 // docs are turned off everywhere.
 #[allow(missing_docs)]
 mod msg_impl {
+    use kameo::prelude::DelegatedReply;
+
     use super::*;
 
     #[kameo::messages]
     impl PeerTracker {
         /// Lookup a peer by name.
-        #[message]
-        pub fn peer_by_name(&self, name: String) -> Option<Node> {
-            self.peers
-                .values()
-                .find(|&peer| peer.matches_name(&name))
-                .cloned()
+        ///
+        /// Waits until we've received at least one peer update from control.
+        #[message(ctx)]
+        pub async fn peer_by_name(
+            &mut self,
+            ctx: &mut Context<Self, DelegatedReply<Option<Node>>>,
+            name: String,
+        ) -> DelegatedReply<Option<Node>> {
+            let (deleg, sender) = ctx.reply_sender();
+            let Some(sender) = sender else { return deleg };
+
+            if !self.seen_state_update {
+                tracing::debug!(query = name, "no peer state seen yet, queueing request");
+
+                self.pending_requests
+                    .push(Pending::PeerByName(PeerByName { name }, sender));
+
+                return deleg;
+            }
+
+            sender.send(self.peer_by_name_opt(&name).cloned());
+
+            deleg
         }
     }
 }
@@ -129,6 +163,25 @@ impl Message<Arc<ts_control::StateUpdate>> for PeerTracker {
             peer_count = self.peers.len(),
             "new peer state"
         );
+
+        if !self.seen_state_update {
+            self.seen_state_update = true;
+
+            if !self.pending_requests.is_empty() {
+                tracing::debug!(
+                    n_pending = self.pending_requests.len(),
+                    "state update received, servicing pending requests"
+                );
+            }
+
+            for req in core::mem::take(&mut self.pending_requests) {
+                match req {
+                    Pending::PeerByName(PeerByName { name }, reply) => {
+                        reply.send(self.peer_by_name_opt(&name).cloned());
+                    }
+                }
+            }
+        }
 
         if let Err(e) = self
             .env
