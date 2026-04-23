@@ -251,6 +251,16 @@ impl Device {
         .map_err(Into::into)
     }
 
+    /// Get our node info.
+    pub async fn self_node(&self) -> Result<NodeInfo, Error> {
+        self.runtime
+            .control
+            .ask(ts_runtime::control_runner::SelfNode)
+            .await
+            .map_err(ts_runtime::Error::from)?
+            .ok_or(Error::RuntimeDegraded)
+    }
+
     /// Attempt to gracefully shut down this device's runtime.
     ///
     /// Reports whether the device was fully shut down before the timeout. It is still shut

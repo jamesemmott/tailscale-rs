@@ -152,6 +152,26 @@ impl ControlRunner {
 
         deleg
     }
+
+    /// Fetch the self node for this tailscale device.
+    #[message(ctx)]
+    pub fn self_node(
+        &self,
+        ctx: &mut Context<Self, DelegatedReply<Option<Node>>>,
+    ) -> DelegatedReply<Option<Node>> {
+        let (deleg, replier) = ctx.reply_sender();
+
+        if let Some(replier) = replier {
+            let node = self.with_self_node(|node| node.clone());
+
+            tokio::spawn(async move {
+                let node = node.await;
+                replier.send(node)
+            });
+        }
+
+        deleg
+    }
 }
 
 impl Message<StreamMessage<Arc<StateUpdate>, (), ()>> for ControlRunner {
