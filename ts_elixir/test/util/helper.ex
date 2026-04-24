@@ -13,7 +13,7 @@ defmodule Tailscale.Test.Helpers do
   def check_net(_ctx) do
     case :gen_tcp.connect(~c"controlplane.tailscale.com", 443, [:binary, active: false]) do
       {:ok, _} ->
-        :ok
+        {:ok, net_ok: true}
 
       _ ->
         {:error, "couldn't tcp connect"}
@@ -40,15 +40,17 @@ defmodule Tailscale.Test.Helpers do
   end
 
   def connected_client(ctx) do
-    :ok = check_net(ctx)
+    {:ok, _} = check_net(ctx)
     {:ok, auth_key: auth_key} = auth_key(ctx)
     {:ok, state_file: state_file} = state_file(ctx)
 
     case Tailscale.connect(state_file, auth_key: auth_key) do
       {:ok, dev} ->
-        # wait for ipv4 to be available (successful control connection)
-        {:ok, _ip} = Tailscale.ipv4_addr(dev)
-        {:ok, ts: dev, state_file: state_file, auth_key: auth_key}
+        # wait for ips to be available (successful control connection)
+        {:ok, ipv4} = Tailscale.ipv4_addr(dev)
+        {:ok, ipv6} = Tailscale.ipv6_addr(dev)
+
+        {:ok, ts: dev, ipv4: ipv4, ipv6: ipv6, auth_key: auth_key, state_file: state_file}
 
       _ ->
         {:error, "failed to start tailscale client"}

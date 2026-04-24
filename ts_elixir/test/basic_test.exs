@@ -23,26 +23,22 @@ defmodule Tailscale.Test do
     setup [:connected_client]
 
     @tag skip: @net_skip
-    test "ip4", %{ts: dev} do
-      {:ok, ip} = Tailscale.ipv4_addr(dev)
+    test "ip4", %{ipv4: ip} do
       assert :inet.is_ipv4_address(ip)
     end
 
     @tag skip: @net_skip
-    test "ip6", %{ts: dev} do
-      {:ok, ip} = Tailscale.ipv6_addr(dev)
+    test "ip6", %{ipv6: ip} do
       assert :inet.is_ipv6_address(ip)
     end
 
     @tag skip: @net_skip
-    test "udp bind", %{ts: dev} do
-      {:ok, ip} = Tailscale.ipv4_addr(dev)
+    test "udp bind", %{ts: dev, ipv4: ip} do
       {:ok, _sock} = Tailscale.Udp.bind(dev, ip, 1234)
     end
 
     @tag skip: @net_skip
-    test "tcp listen", %{ts: dev} do
-      {:ok, ip} = Tailscale.ipv4_addr(dev)
+    test "tcp listen", %{ts: dev, ipv4: ip} do
       {:ok, _sock} = Tailscale.Tcp.listen(dev, ip, 1234)
     end
   end
