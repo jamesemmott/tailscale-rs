@@ -40,8 +40,16 @@ $ TS_RS_EXPERIMENT=this_is_unstable_software python demo.py
 
 ## Building and Usage
 
-We're not up on pypi, so you can't `pip install tailscale` yet. To use the module, you'll
-need to build it. The best way to do that is with [`maturin`](https://www.maturin.rs/):
+The easiest way to get the library is through pypi:
+
+```shell
+$ pip install tailscale
+```
+
+### In development
+
+If you want to use the module from within this repo, you'll need to build it. The best way to do
+that is with [`maturin`](https://www.maturin.rs/):
 
 ```sh
 # In the project where you want to use the tailscale bindings:
@@ -55,4 +63,3 @@ $ maturin develop             # build and install python bindings into your virt
 
 $ python -c 'import tailscale' && echo "ready!" # bindings are available!
 ```
-
