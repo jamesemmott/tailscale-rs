@@ -4490,6 +4490,7 @@ dependencies = [
 name = "ts_python"
 version = "0.2.0"
 dependencies = [
+ "hex",
  "pyo3",
  "pyo3-async-runtimes",
  "tailscale",

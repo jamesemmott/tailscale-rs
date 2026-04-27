@@ -16,10 +16,12 @@ extern crate tailscale as ts;
 type PyFut<'p> = PyResult<Bound<'p, PyAny>>;
 
 mod ip_or_str;
+mod key_state;
 mod node_info;
 mod tcp;
 mod udp;
 
+use key_state::Keystate;
 use node_info::NodeInfo;
 
 /// Tailscale API.
@@ -28,15 +30,23 @@ pub mod _internal {
     use super::*;
     #[pymodule_export]
     use crate::{
-        Device,
+        Device, Keystate,
         tcp::{TcpListener, TcpStream},
         udp::UdpSocket,
     };
 
-    /// Connect to tailscale using the specified config file and optional auth key.
+    /// Connect to tailscale using the specified parameters.
     #[pyfunction]
-    #[pyo3(signature = (config_path, auth_key=None))]
-    pub fn connect(py: Python<'_>, config_path: String, auth_key: Option<String>) -> PyFut<'_> {
+    #[pyo3(signature = (key_file_path=None, /, auth_key=None, *, control_server_url=None, hostname=None, tags=None, keys=None))]
+    pub fn connect(
+        py: Python<'_>,
+        key_file_path: Option<String>,
+        auth_key: Option<String>,
+        control_server_url: Option<String>,
+        hostname: Option<String>,
+        tags: Option<Vec<String>>,
+        keys: Option<Keystate>,
+    ) -> PyFut<'_> {
         static TRACING_ONCE: Once = Once::new();
         TRACING_ONCE.call_once(|| {
             tracing_subscriber::fmt()
@@ -49,12 +59,30 @@ pub mod _internal {
         });
 
         future_into_py(py, async move {
-            let config = ts::Config {
-                client_name: Some("ts_python".to_owned()),
-                ..ts::Config::default_with_key_file(config_path)
+            let mut config = if let Some(key_file_path) = key_file_path {
+                ts::Config::default_with_key_file(key_file_path)
                     .await
                     .map_err(py_value_err)?
+            } else {
+                ts::Config::default()
             };
+
+            config.client_name = Some("ts_python".to_owned());
+            if let Some(control_server_url) = control_server_url {
+                config.control_server_url = control_server_url.parse().map_err(py_value_err)?;
+            }
+
+            if let Some(hostname) = hostname {
+                config.requested_hostname = Some(hostname);
+            }
+
+            if let Some(tags) = tags {
+                config.requested_tags = tags;
+            }
+
+            if let Some(keys) = &keys {
+                config.key_state = keys.try_into().map_err(|_| py_value_err("invalid keys"))?;
+            }
 
             let dev = ts::Device::new(&config, auth_key)
                 .await
