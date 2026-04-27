@@ -168,6 +168,16 @@ impl Device {
             Ok(node.map(|node| NodeInfo::from(&node)))
         })
     }
+
+    /// Get this device's node info.
+    pub fn self_node<'p>(&self, py: Python<'p>) -> PyFut<'p> {
+        let dev = self.dev.clone();
+
+        future_into_py(py, async move {
+            let node = dev.self_node().await.map_err(py_value_err)?;
+            Ok(NodeInfo::from(&node))
+        })
+    }
 }
 
 fn sockaddr_as_tuple(s: SocketAddr) -> (IpAddr, u16) {
