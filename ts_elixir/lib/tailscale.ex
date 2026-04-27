@@ -17,21 +17,21 @@ defmodule Tailscale do
   @typedoc """
   An IPv4 address.
     
-  `tailscale` is capable of interpreting either the `inet` format or a `String`.
+  `tailscale` is capable of interpreting either the `m::inet` format or a `String`.
   """
   @type ip4_addr() :: :inet.ip4_address() | String.t()
 
   @typedoc """
   An IPv6 address.
     
-  `tailscale` is capable of interpreting either the `inet` format or a `String`.
+  `tailscale` is capable of interpreting either the `m::inet` format or a `String`.
   """
   @type ip6_addr() :: :inet.ip6_address() | String.t()
 
   @typedoc """
   An IP address (v4 or v6).
     
-  `tailscale` is capable of interpreting either the `inet` format or a `String`.
+  `tailscale` is capable of interpreting either the `m::inet` format or a `String`.
   """
   @type ip_addr() :: ip4_addr() | ip6_addr()
 
@@ -105,8 +105,8 @@ defmodule Tailscale do
     
   Blocks until the address is available.
 
-  Note that this address is in `:inet` format (16-bit segments), which may be difficult to read. 
-  See `:inet.ntoa` to format to a string.
+  Note that this address is in `t::inet.ip6_address/0` format (16-bit segments), which may be
+  difficult to read. See `:inet.ntoa/1` to format to a string.
   """
   def ipv6_addr(dev), do: Tailscale.Native.ipv6_addr(dev)
 
@@ -114,7 +114,8 @@ defmodule Tailscale do
   @doc """
   Look up a peer by name.
 
-  Returns `{:ok, nil}` if there was no such peer. `:error` if the lookup encountered an error.
+  Returns `{:ok, nil}` if there was no such peer, and `{:error, reason}` if the lookup encountered
+  an error.
   """
   def peer_by_name(dev, name), do: Tailscale.Native.peer_by_name(dev, name)
 

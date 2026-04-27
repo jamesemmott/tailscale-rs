@@ -11,7 +11,7 @@ the API as we iterate.
 # Connect to tailscale:
 {:ok, dev} = Tailscale.connect("tsrs_keys.json", auth_key: "YOUR_AUTH_KEY")
 # Fetch our tailnet IPv4:
-{:ok, ip} = Tailscale.ip4(dev)
+{:ok, ip} = Tailscale.ipv4_addr(dev)
 
 # Bind a udp socket:
 {:ok, sock} = Tailscale.Udp.bind(dev, ip, 1234)

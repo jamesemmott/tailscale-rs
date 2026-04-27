@@ -3,12 +3,15 @@ defmodule Tailscale.Native do
     otp_app: :tailscale,
     crate: :ts_elixir
 
-  @moduledoc """
-  The Elixir side of the Rustler bindings to `tailscale-rs`.
+  @moduledoc false
 
-  The rest of this package adapts these bindings to a more Elixir-friendly module layout -- this is
-  where Rustler actually connects the Rust nifs to their Elixir names, so it's a flat module.
-  """
+  # The Elixir side of the Rustler bindings to `tailscale-rs`.
+  #
+  # The rest of this package adapts these bindings to a more Elixir-friendly module layout -- this is
+  # where Rustler actually connects the Rust nifs to their Elixir names, so it's a flat module.
+  #
+  # Consider this module an internal implementation detail: we may break its API at our convenience
+  # without a semver bump.
 
   @typedoc """
   A handle to a unique tailscale "identity" on a given tailnet.
